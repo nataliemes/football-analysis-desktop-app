@@ -11,6 +11,16 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
+# from logging_setup import logging   # for using logging_setup.py directly
+import logging
+import logging.config
+import json
+
+# reading the logging configuration from a json file
+with open("logging_config.json", "r", encoding="utf-8") as fd:
+    logging.config.dictConfig(json.load(fd))
+
+logger = logging.getLogger("my_app")
 
 class Date():
     """
@@ -112,10 +122,14 @@ class myApp(QtWidgets.QMainWindow):
         self.ui.setupUi(self)
         self.setWindowTitle("International Football Statistics")
 
+        logger.info("important: application window opened")
+
         # connecting to the MongoDB database
         self.conn = MongoClient()
         self.base = self.conn["Football_base"]
         self.coll = self.base["Result_recs"]
+
+        logger.info("connected to MongoDB database")
 
         # making the day/month/year textboxes unavailable for the user
         # so that they will choose the date from the calendar widget
@@ -176,6 +190,8 @@ class myApp(QtWidgets.QMainWindow):
             self.ui.month_box.setPlainText(f'{date.month()}')    
             self.ui.year_box.setPlainText(f'{date.year()}')  
 
+            logger.debug(f"date chosen: day {date.day}, month {date.month}, year {date.year}")
+
         # while the calendar widget is activated, date textboxes will be updated accordingly
         self.ui.calendarWidget.activated.connect(date_chosen)
 
@@ -186,6 +202,7 @@ class myApp(QtWidgets.QMainWindow):
             Parameters: none
             Return value: none
             """
+            logger.info("important: create database button clicked")
             clear()        
 
             # checking whether or not database already exists
@@ -193,17 +210,22 @@ class myApp(QtWidgets.QMainWindow):
             if 'Football_base' in dbnames:
                 self.ui.textLabel.setText("Database already exists!")
                 fields_enabled(True)
+                logger.warning("user tried to create database which already exists")
             else:
                 try:  # trying to read from the file if such a file exists
                     df = pd.read_csv('results.csv')  # create a dataframe of results
                 except:
                     self.ui.textLabel.setText("File for database not found!")
+                    logger.critical("important: file for database not found!")
                     return
                 
                 # creating a MongoDB database from dataframe
                 self.coll.insert_many(df.to_dict('records'))
                 self.ui.textLabel.setText("Database was created!")
                 fields_enabled(True)  # opening up all the textboxes
+
+                logger.info("database created")
+                logger.info("textboxes opened")
         
 
         def butt_save_match_clicked(): # adds data of one student to the database
@@ -213,6 +235,7 @@ class myApp(QtWidgets.QMainWindow):
             Parameters: none
             Return value: none
             """
+            logger.info("important: save match button clicked")
             
             # reading user's input
             day = self.ui.day_box.toPlainText()
@@ -226,6 +249,10 @@ class myApp(QtWidgets.QMainWindow):
 
             clear()  # clearing all the fields after reading them
 
+            logger.debug(f"info read from calendar - day: {day}, month: {month}, year: {year}")
+            logger.debug(f"info read from user - homeTeam: {homeTeam}, awayTeam: {awayTeam}, homeScore: {homeScore}, awayScore: {awayScore}, tournament: {tournament}")        
+                         
+
             # error checking
             validInput = True
             if day == "": validInput = False
@@ -234,6 +261,7 @@ class myApp(QtWidgets.QMainWindow):
 
             if not validInput:
                 self.ui.textLabel.setText("Invalid input, match was not added!")
+                logger.error("user entered invalid input for the match")
                 return
 
             # adding the match to the database if it is valid
@@ -242,8 +270,14 @@ class myApp(QtWidgets.QMainWindow):
             self.coll.insert_one(currentMatch)
             self.ui.textLabel.setText("New match was added!")
 
+            logger.info("user's new match was added to the database")
 
-        
+            logger.debug(f"info of the match added to the database: day {day}, month {month}, year {year}, \
+                         homeTeam {homeTeam}, awayTeam {awayTeam}, homeScore {homeScore}, \
+                         awayScore {awayScore}, tournament {tournament}")
+            
+            logger.debug(f"date of the match added to the database - day: {day}, month: {month}, year: {year}")
+            logger.debug(f"info of the match added to the database - homeTeam: {homeTeam}, awayTeam: {awayTeam}, homeScore: {homeScore}, awayScore: {awayScore}, tournament: {tournament}")
 
 
         def butt_plot_diagram_clicked():
@@ -253,6 +287,8 @@ class myApp(QtWidgets.QMainWindow):
             Parameters: none
             Return value: none
             """
+            logger.info("important: plot button clicked")
+
             clear()
             self.ui.charts_tab.clear()  # clearing the charts tab in case previous charts are there            
 
@@ -265,6 +301,8 @@ class myApp(QtWidgets.QMainWindow):
                 Return value: none
                 """
 
+                logger.info("tab creation started")
+
                 # adding a new tab into the charts tab widget
                 self.figure = plt.figure()
                 self.canvas = FigureCanvas(self.figure)
@@ -274,6 +312,8 @@ class myApp(QtWidgets.QMainWindow):
                 QtWidgets.QTabWidget.addTab(self.ui.charts_tab, self.tab, f"{chartType} chart") 
                 self.tab.setLayout(layout)
 
+                logger.info("tab creation ended")
+
                 # bar chart includes lots of years on the x-axis,
                 # so, making sure that the labels don't overlap
                 if chartType=='bar':
@@ -281,22 +321,32 @@ class myApp(QtWidgets.QMainWindow):
                 else:
                     plt.rc('xtick', labelsize = 10)
 
+                
+                logger.info("diagram plotting started")
+
                 # plotting the diagrams
                 if type(grp_df2)==str:                     
                         grp_df1.plot(color = 'rebeccapurple', kind=str(chartType))
                 else:
                     grp_df1.plot(color='violet', kind=chartType)
-                    grp_df2.plot(color='midnightblue', kind=chartType)                 
+                    grp_df2.plot(color='midnightblue', kind=chartType)   
+
+                logger.info("diagram plotting finished")              
             
 
             # reading user's input
             parameter = self.ui.comboBox_parameter1.currentText()
             userInput = self.ui.userInput_box.toPlainText()
 
-            if (userInput == ""): return  # error checking                    
+            logger.debug(f"user input for plotting diagrams: {userInput}")
+
+            if (userInput == ""):
+                logger.error("user entered nothing when attempting to plot")
+                return  # error checking                    
             
             # first reading all the data from MongoDB database to pandas
-            df = pd.DataFrame(list(self.coll.find()))              
+            df = pd.DataFrame(list(self.coll.find()))   
+            logger.info("reading data from MongoDB database to pandas")           
 
             if (parameter == "# of victories"): parameter = "winner"
             elif (parameter == "# of defeats"): parameter = "loser"                
@@ -305,11 +355,15 @@ class myApp(QtWidgets.QMainWindow):
 
                 # analyzing data with pandas module
                 df_temp1 = df[df["home_team"] == userInput]
-                if len(df_temp1) == 0 : return  # error checking
+                if len(df_temp1) == 0:   # error checking
+                    logger.warning(f"{userInput} not found as a home_team in the database")
+                    return
                 grp_df1 = df_temp1["home_score"].groupby(df_temp1["year"]).sum()
                 
                 df_temp2 = df[df["away_team"] == userInput]
-                if len(df_temp2) == 0 : return  # error checking
+                if len(df_temp2) == 0:   # error checking
+                    logger.warning(f"{userInput} not found as an away_team in the database")
+                    return
                 grp_df2 = df_temp2["away_score"].groupby(df_temp2["year"]).sum()
                 
                 # creating different types of diagrams in different tabs
@@ -320,7 +374,9 @@ class myApp(QtWidgets.QMainWindow):
             else:  # if parameter is "# of victories" or "# of defeats"
                 # analyzing data with pandas module
                 df_temp = df[df[parameter] == userInput]
-                if len(df_temp) == 0 : return  # error checking
+                if len(df_temp) == 0:
+                    logger.warning(f"{userInput} not found in the '{parameter}' column in the database")
+                    return  # error checking
                 grp_df1 = df_temp["year"].groupby(df_temp["year"]).count()
 
                 # creating different types of diagrams in different tabs 
