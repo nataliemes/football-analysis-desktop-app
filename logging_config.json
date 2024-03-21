@@ -1,0 +1,46 @@
+{
+    "version": 1,
+    "disable_existing_loggers": "False",
+    "formatters": {
+        "short_formatter": {
+            "format": "%(levelname)s // %(message)s"
+        },
+        "long_formatter": {
+            "format": "%(asctime)s // %(name)s // %(levelname)s // %(message)s"
+        }
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "level": "WARNING",
+            "formatter": "short_formatter",
+            "stream": "ext://sys.stdout"
+        },
+        "file": {
+            "class": "logging.FileHandler",
+            "level": "DEBUG",
+            "formatter": "long_formatter",
+            "filename": "app_logs.txt",
+            "mode": "w"
+        },
+        "discord": {
+            "class": "custom_logging.DiscordHandler",
+            "level": "DEBUG",
+            "formatter": "long_formatter",
+            "filters": ["important_filter"],
+            "webhook_url": "https://discord.com/api/webhooks/1219985617304158271/_Vm5B4eACDVMrl2qqMY5zex524P47z4iiKEz10c0wDBs4FmlHZARHE2xudKCqst-p5-m"
+        }
+    },
+    "loggers": {
+        "my_app": {
+            "level": "DEBUG",
+            "handlers": ["console", "file", "discord"],
+            "propagate": "True"
+        }
+    },
+    "filters": {
+        "important_filter": {
+            "()": "custom_logging.ImportantFilter"
+        }
+    }
+}
