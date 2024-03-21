@@ -20,9 +20,9 @@ console.setLevel(logging.WARNING)
 console.setFormatter(short_formatter)
 logger.addHandler(console)
 
-# file handler === logs CRITICAL level messages
+# file handler === logs all level messages
 file = logging.FileHandler(filename="important_logs.txt")
-file.setLevel(logging.CRITICAL)
+file.setLevel(logging.DEBUG)
 file.setFormatter(long_formatter)
 logger.addHandler(console)
 
